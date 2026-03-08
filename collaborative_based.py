@@ -25,7 +25,7 @@ def build_collaborative_model(data):
 def recommend_collaborative(user_id, user_item_matrix, similarity_df, top_n=5):
 
     if user_id not in user_item_matrix.index:
-        return "User not found"
+        return [], "User not found"
 
     similar_users = similarity_df[user_id].sort_values(ascending=False)[1:21]
 
@@ -37,4 +37,6 @@ def recommend_collaborative(user_id, user_item_matrix, similarity_df, top_n=5):
 
     recommended_products = recommended_products[user_rated_products == 0]
 
-    return recommended_products.head(top_n)
+    recommended_list = recommended_products.head(top_n).index.tolist()
+
+    return recommended_list, recommended_products.head(top_n)
