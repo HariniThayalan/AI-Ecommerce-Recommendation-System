@@ -1,0 +1,48 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+*.env
+firebase_key.json
+secrets/
+
+# ── Reflex (frontend) generated files ────────────────────────────────────────
+.web/
+.states/
+*.db
+
+# ── Data files (large) ───────────────────────────────────────────────────────
+# Uncomment if you don't want to track the CSV in git:
+# cleaned_data.csv
+# backend/cleaned_data.csv
+
+# ── Logs and temp ─────────────────────────────────────────────────────────────
+*.log
+build_log.txt
+*.tmp
+*.bak
+
+# ── OS files ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
