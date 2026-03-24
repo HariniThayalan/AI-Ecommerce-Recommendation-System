@@ -32,6 +32,10 @@ export const useStore = create((set, get) => ({
   sortBy:           "relevance",
   currentProdId:    "8",  // default product for content/hybrid recs
 
+  // ── Multi-mode Recommendations (auto-loaded) ──────────────────────────────────
+  multiRecs: { content: [], collaborative: [], hybrid: [] },
+  multiRecsLoading: false,
+
   fetchProducts: async (params = {}) => {
     set({ isLoading: true });
     try {
@@ -58,6 +62,29 @@ export const useStore = create((set, get) => ({
     } catch (_) {
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  fetchAllRecommendations: async (prodId) => {
+    const pid = prodId || get().currentProdId;
+    const uid = get().userId;
+    set({ multiRecsLoading: true });
+    try {
+      const [contentRes, collabRes, hybridRes] = await Promise.all([
+        api.getContentRecs(pid, 12),
+        api.getCollabRecs(uid, 12),
+        api.getHybridRecs(uid, pid, 12),
+      ]);
+      set({
+        multiRecs: {
+          content:       contentRes.data.recommendations || [],
+          collaborative: collabRes.data.recommendations  || [],
+          hybrid:        hybridRes.data.recommendations  || [],
+        },
+      });
+    } catch (_) {
+    } finally {
+      set({ multiRecsLoading: false });
     }
   },
 
