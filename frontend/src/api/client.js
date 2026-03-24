@@ -1,12 +1,13 @@
 import axios from "axios";
 import toast from "react-hot-toast";
 
-const api = axios.create({ baseURL: "http://localhost:8000" });
+const VITE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const api = axios.create({ baseURL: VITE_API_URL });
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    const msg = err?.response?.data?.detail || "Server error — is FastAPI running on :8000?";
+    const msg = err?.response?.data?.detail || `Server error — Is the backend running at ${VITE_API_URL}?`;
     toast.error(msg);
     return Promise.reject(err);
   }

@@ -7,15 +7,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import uuid
+import os
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 from data_loader import load_and_format, format_product
 from recommendation_engine import RecommendationEngine
 
 app = FastAPI(title="ShopSmart AI", version="3.0.0")
 
+# Enable CORS for Vercel Frontend
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"http://localhost:\d+",  # allow any localhost port (5173, 5174, 3000…)
+    allow_origins=[ALLOWED_ORIGIN],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -214,4 +221,5 @@ def get_wishlist(user_id: str):
 # ── Entry ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
