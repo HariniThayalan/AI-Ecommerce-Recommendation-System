@@ -1,12 +1,35 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
+import json
 
-# Initialize Firebase with the key file
-# The key file should be in the same directory as this file
-cred_path = os.path.join(os.path.dirname(__file__), "firebase_key.json")
-cred = credentials.Certificate(cred_path)
-firebase_admin.initialize_app(cred)
+# Initialize Firebase
+# On Render, we'll use an environment variable 'FIREBASE_CREDENTIALS' (JSON string)
+# Locally, we'll fall back to 'firebase_key.json'
+firebase_creds_json = os.environ.get("FIREBASE_CREDENTIALS")
+
+if firebase_creds_json:
+    # Use the JSON string from Environment Variable
+    try:
+        creds_dict = json.loads(firebase_creds_json)
+        cred = credentials.Certificate(creds_dict)
+    except Exception as e:
+        print(f"❌ Error parsing FIREBASE_CREDENTIALS env var: {e}")
+        # Fallback to file search if env var is malformed
+        cred_path = os.path.join(os.path.dirname(__file__), "firebase_key.json")
+        cred = credentials.Certificate(cred_path)
+else:
+    # Fallback to local file for development
+    cred_path = os.path.join(os.path.dirname(__file__), "firebase_key.json")
+    if os.path.exists(cred_path):
+        cred = credentials.Certificate(cred_path)
+    else:
+        # If no file and no env var, this will intentionally fail with a better error
+        raise FileNotFoundError("Firebase credentials not found (env 'FIREBASE_CREDENTIALS' or 'firebase_key.json' file missing)")
+
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(cred)
+
 db = firestore.client()
 
 # ── Cart ──────────────────────────────────────────────────────
