@@ -10,6 +10,8 @@ export const useStore = create((set, get) => ({
   userName:  "Demo User",
   userEmail: "demo@shopsmart.ai",
   isLoggedIn: false,
+  searchHistory: [],
+  orders: [],
 
   login: (name, email) => {
     set({ isLoggedIn: true, userName: name, userEmail: email || "user@shopsmart.ai" });
@@ -93,6 +95,15 @@ export const useStore = create((set, get) => ({
   setMinRating:        (r)    => set({ minRating: r }),
   setMaxPrice:         (p)    => set({ maxPrice: p }),
   setSortBy:           (s)    => set({ sortBy: s }),
+
+  addToSearchHistory: (query) => set(state => ({
+    searchHistory: [
+      ...state.searchHistory.filter(q => q !== query), // avoid dupes
+      query
+    ].slice(-20)  // keep last 20 searches
+  })),
+
+  setOrders: (orders) => set({ orders }),
 
   // ── Cart ─────────────────────────────────────────────────────────────────────
   cartItems: [],

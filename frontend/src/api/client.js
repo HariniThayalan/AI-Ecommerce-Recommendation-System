@@ -37,3 +37,10 @@ export const getOrders  = (uid)   => api.get(`/orders/${uid}`);
 export const toggleWishlist = (uid, pid) =>
   api.post(`/wishlist/${uid}/toggle`, null, { params: { product_id: pid } });
 export const getWishlist = (uid) => api.get(`/wishlist/${uid}`);
+
+// ── Razorpay Payment ──────────────────────────────────────────────────────────
+export const createRazorpayOrder = (amount, receipt) =>
+  api.post("/payment/create-order", { amount, receipt });
+
+export const verifyPayment = (data) =>
+  api.post("/payment/verify", data);

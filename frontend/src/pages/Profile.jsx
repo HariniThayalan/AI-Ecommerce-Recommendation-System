@@ -7,16 +7,15 @@ import ProductCard from "../components/ProductCard";
 const TABS = ["Orders", "Wishlist", "Settings"];
 
 export default function Profile() {
-  const { isLoggedIn, login, logout, userName, userEmail, userId, wishlistIds, products, fetchProducts } = useStore();
+  const { isLoggedIn, login, logout, userName, userEmail, userId, wishlistIds, products, fetchProducts, orders, setOrders } = useStore();
   const [activeTab, setActiveTab] = useState("Orders");
-  const [orders, setOrders] = useState([]);
   const [loginName, setLoginName] = useState("");
   const [loginEmail, setLoginEmail] = useState("");
   const [wishProds, setWishProds] = useState([]);
 
   useEffect(() => {
     if (isLoggedIn) getOrders(userId).then((r) => setOrders(r.data || [])).catch(() => {});
-  }, [isLoggedIn]);
+  }, [isLoggedIn, userId, setOrders]);
 
   useEffect(() => { if (products.length === 0) fetchProducts(); }, []);
   useEffect(() => { setWishProds(products.filter((p) => wishlistIds.includes(p.id))); }, [wishlistIds, products]);

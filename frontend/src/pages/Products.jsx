@@ -148,7 +148,10 @@ export default function Products() {
   useEffect(() => {
     const q   = searchParams.get("q");
     const cat = searchParams.get("category");
-    if (q)        fetchProducts({ q });
+    if (q) {
+      fetchProducts({ q });
+      useStore.getState().addToSearchHistory(q);
+    }
     else if (cat) fetchProducts({ category: cat });
     else          fetchRecommendations("top_rated");
 

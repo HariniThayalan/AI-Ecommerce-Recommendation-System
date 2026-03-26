@@ -8,7 +8,10 @@ from pydantic import BaseModel
 from typing import Optional
 import uuid
 import os
+import hmac, hashlib
+import razorpay
 from dotenv import load_dotenv
+import firebase_db as fdb
 
 # Load .env file
 load_dotenv()
@@ -32,10 +35,9 @@ app.add_middleware(
 df     = None
 engine: Optional[RecommendationEngine] = None
 
-# In-memory stores (reset on restart — fine for capstone demo)
-_carts:     dict = {}   # {user_id: [{product, quantity}]}
-_wishlists: dict = {}   # {user_id: [product_id_str, ...]}
-_orders:    dict = {}   # {order_id: order_dict}
+razorpay_client = razorpay.Client(
+    auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET"))
+)
 
 
 @app.on_event("startup")
@@ -141,40 +143,26 @@ class CartItemIn(BaseModel):
 
 
 @app.get("/cart/{user_id}")
-def get_cart(user_id: str):
-    return {"items": _carts.get(user_id, [])}
+async def get_cart(user_id: str):
+    return {"items": fdb.get_cart(user_id)}
 
 
 @app.post("/cart/{user_id}/add")
-def add_to_cart(user_id: str, body: CartItemIn):
-    cart = _carts.setdefault(user_id, [])
-    pid  = body.product["id"]
-    for item in cart:
-        if item["product"]["id"] == pid:
-            item["quantity"] += body.quantity
-            return {"status": "updated", "cart": cart}
-    cart.append({"product": body.product, "quantity": body.quantity})
-    return {"status": "added", "cart": cart}
+async def add_to_cart(user_id: str, body: CartItemIn):
+    cart = fdb.add_to_cart(user_id, body.product, body.quantity)
+    return {"status": "ok", "cart": cart}
 
 
 @app.put("/cart/{user_id}/quantity")
-def update_qty(user_id: str, product_id: str, quantity: int):
-    cart = _carts.get(user_id, [])
-    if quantity <= 0:
-        _carts[user_id] = [i for i in cart if i["product"]["id"] != product_id]
-    else:
-        for item in cart:
-            if item["product"]["id"] == product_id:
-                item["quantity"] = quantity
-    return {"cart": _carts.get(user_id, [])}
+async def update_qty(user_id: str, product_id: str, quantity: int):
+    cart = fdb.update_cart_qty(user_id, product_id, quantity)
+    return {"cart": cart}
 
 
 @app.delete("/cart/{user_id}/remove/{product_id}")
-def remove_from_cart(user_id: str, product_id: str):
-    _carts[user_id] = [
-        i for i in _carts.get(user_id, []) if i["product"]["id"] != product_id
-    ]
-    return {"cart": _carts.get(user_id, [])}
+async def remove_from_cart(user_id: str, product_id: str):
+    cart = fdb.remove_from_cart(user_id, product_id)
+    return {"cart": cart}
 
 
 # ── Orders ─────────────────────────────────────────────────────────────────────
@@ -190,32 +178,97 @@ class OrderIn(BaseModel):
 
 
 @app.post("/orders")
-def place_order(order: OrderIn):
-    oid = "ORD-" + str(uuid.uuid4())[:8].upper()
-    _orders[oid] = {**order.dict(), "order_id": oid, "status": "Confirmed"}
-    _carts[order.user_id] = []   # clear cart after order
-    return {"order_id": oid, "status": "Confirmed"}
+async def place_order(order: OrderIn):
+    order_id = "ORD-" + str(uuid.uuid4())[:8].upper()
+    data = {**order.dict(), "order_id": order_id, "status": "Confirmed"}
+    fdb.save_order(order_id, data)
+    fdb.clear_cart(order.user_id)
+    return {"order_id": order_id, "status": "Confirmed"}
 
 
 @app.get("/orders/{user_id}")
-def get_orders(user_id: str):
-    return [o for o in _orders.values() if o["user_id"] == user_id]
+async def get_orders(user_id: str):
+    return fdb.get_orders(user_id)
+
+
+# ── Razorpay Payment ──────────────────────────────────────────────────────────
+class RazorpayOrderIn(BaseModel):
+    amount:   float
+    currency: str = "INR"
+    receipt:  str
+
+
+@app.post("/payment/create-order")
+async def create_razorpay_order(body: RazorpayOrderIn):
+    try:
+        rz_order = razorpay_client.order.create({
+            "amount": int(body.amount * 100),
+            "currency": body.currency,
+            "receipt": body.receipt,
+            "payment_capture": 1
+        })
+        return {
+            "razorpay_order_id": rz_order["id"],
+            "amount": rz_order["amount"],
+            "currency": rz_order["currency"],
+            "key_id": os.getenv("RAZORPAY_KEY_ID"),
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Razorpay error: {e}")
+
+
+class PaymentVerifyIn(BaseModel):
+    razorpay_order_id:   str
+    razorpay_payment_id: str
+    razorpay_signature:  str
+    user_id:      str
+    items:        list
+    grand_total:  float
+    address:      dict
+    payment_method: str = "razorpay"
+
+
+@app.post("/payment/verify")
+async def verify_payment(body: PaymentVerifyIn):
+    msg = f"{body.razorpay_order_id}|{body.razorpay_payment_id}"
+    # Bypass for demo/presentation with fake_sig
+    if body.razorpay_signature != "fake_sig":
+        expected = hmac.new(
+            os.getenv("RAZORPAY_KEY_SECRET", "").encode(),
+            msg.encode(),
+            hashlib.sha256
+        ).hexdigest()
+
+        if expected != body.razorpay_signature:
+            raise HTTPException(400, "Payment verification failed")
+
+    order_id = "ORD-" + str(uuid.uuid4())[:8].upper()
+    order_data = {
+        "order_id": order_id,
+        "razorpay_payment_id": body.razorpay_payment_id,
+        "razorpay_order_id":   body.razorpay_order_id,
+        "user_id":      body.user_id,
+        "items":        body.items,
+        "grand_total":  body.grand_total,
+        "address":      body.address,
+        "payment_method": "razorpay",
+        "status": "Confirmed",
+    }
+    fdb.save_order(order_id, order_data)
+    fdb.clear_cart(body.user_id)
+    return {"order_id": order_id, "status": "Confirmed"}
 
 
 # ── Wishlist ───────────────────────────────────────────────────────────────────
 @app.post("/wishlist/{user_id}/toggle")
-def toggle_wishlist(user_id: str, product_id: str):
-    wl = _wishlists.setdefault(user_id, [])
-    if product_id in wl:
-        _wishlists[user_id] = [i for i in wl if i != product_id]
-        return {"status": "removed"}
-    _wishlists[user_id].append(product_id)
-    return {"status": "added"}
+async def toggle_wishlist(user_id: str, product_id: str):
+    status = fdb.toggle_wishlist(user_id, product_id)
+    return {"status": status}
 
 
 @app.get("/wishlist/{user_id}")
-def get_wishlist(user_id: str):
-    return {"product_ids": _wishlists.get(user_id, [])}
+async def get_wishlist(user_id: str):
+    return {"product_ids": fdb.get_wishlist(user_id)}
 
 
 # ── Entry ──────────────────────────────────────────────────────────────────────

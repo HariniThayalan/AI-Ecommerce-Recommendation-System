@@ -1,0 +1,77 @@
+import firebase_admin
+from firebase_admin import credentials, firestore
+import os
+
+# Initialize Firebase with the key file
+# The key file should be in the same directory as this file
+cred_path = os.path.join(os.path.dirname(__file__), "firebase_key.json")
+cred = credentials.Certificate(cred_path)
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+# ── Cart ──────────────────────────────────────────────────────
+def get_cart(user_id: str) -> list:
+    doc = db.collection("carts").document(user_id).get()
+    return doc.to_dict().get("items", []) if doc.exists else []
+
+def add_to_cart(user_id: str, product: dict, quantity: int) -> list:
+    ref = db.collection("carts").document(user_id)
+    doc = ref.get()
+    items = doc.to_dict().get("items", []) if doc.exists else []
+    for item in items:
+        if item["product"]["id"] == product["id"]:
+            item["quantity"] += quantity
+            ref.set({"items": items})
+            return items
+    items.append({"product": product, "quantity": quantity})
+    ref.set({"items": items})
+    return items
+
+def update_cart_qty(user_id: str, product_id: str, quantity: int) -> list:
+    ref = db.collection("carts").document(user_id)
+    doc = ref.get()
+    items = doc.to_dict().get("items", []) if doc.exists else []
+    if quantity <= 0:
+        items = [i for i in items if i["product"]["id"] != product_id]
+    else:
+        for item in items:
+            if item["product"]["id"] == product_id:
+                item["quantity"] = quantity
+    ref.set({"items": items})
+    return items
+
+def remove_from_cart(user_id: str, product_id: str) -> list:
+    ref = db.collection("carts").document(user_id)
+    doc = ref.get()
+    items = doc.to_dict().get("items", []) if doc.exists else []
+    items = [i for i in items if i["product"]["id"] != product_id]
+    ref.set({"items": items})
+    return items
+
+def clear_cart(user_id: str):
+    db.collection("carts").document(user_id).set({"items": []})
+
+# ── Orders ────────────────────────────────────────────────────
+def save_order(order_id: str, order_data: dict):
+    db.collection("orders").document(order_id).set(order_data)
+
+def get_orders(user_id: str) -> list:
+    docs = db.collection("orders").where("user_id", "==", user_id).stream()
+    return [doc.to_dict() for doc in docs]
+
+# ── Wishlist ──────────────────────────────────────────────────
+def get_wishlist(user_id: str) -> list:
+    doc = db.collection("wishlists").document(user_id).get()
+    return doc.to_dict().get("product_ids", []) if doc.exists else []
+
+def toggle_wishlist(user_id: str, product_id: str) -> str:
+    ref = db.collection("wishlists").document(user_id)
+    doc = ref.get()
+    ids = doc.to_dict().get("product_ids", []) if doc.exists else []
+    if product_id in ids:
+        ids.remove(product_id)
+        ref.set({"product_ids": ids})
+        return "removed"
+    ids.append(product_id)
+    ref.set({"product_ids": ids})
+    return "added"

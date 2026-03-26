@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, CheckCircle } from "lucide-react";
+import toast from "react-hot-toast";
 import { useStore } from "../store/useStore";
+import { createRazorpayOrder, verifyPayment } from "../api/client";
 import StepIndicator from "../components/StepIndicator";
+import FakeRazorpayQR from "../components/FakeRazorpayQR";
 
 const PAYMENT_TABS = ["Card", "UPI", "Net Banking", "Cash on Delivery"];
 const BANKS = ["State Bank of India", "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak Mahindra"];
@@ -183,35 +186,65 @@ function ConfirmationStep({ orderId }) {
 }
 
 export default function Checkout() {
-  const { cartItems, placeOrder, userId } = useStore();
+  const { cartItems, userId } = useStore();
   const [step,        setStep]        = useState(1);
   const [isProcessing, setProcessing] = useState(false);
   const [orderId,      setOrderId]    = useState("");
+  const [showQR,       setShowQR]     = useState(false);
 
   const subtotal   = cartItems.reduce((s, i) => s + i.product.final_price * i.quantity, 0);
   const gst        = subtotal * 0.18;
   const grandTotal = subtotal + gst;
 
-  const handlePlaceOrder = async () => {
+  const [deliveryAddress, setDeliveryAddress] = useState({
+    name: "Demo User",
+    phone: "+91 9876543210",
+    city: "Chennai"
+  });
+
+  const handlePay = () => {
     setProcessing(true);
-    await new Promise((r) => setTimeout(r, 2000));  // simulate payment delay
-    const oid = await placeOrder({
-      user_id: userId,
-      items: cartItems,
-      subtotal,
-      discount: 0,
-      gst,
-      grand_total: grandTotal,
-      payment_method: "card",
-      address: { city: "Chennai" },
-    });
-    setOrderId(oid || "ORD-DEMO001");
-    setStep(3);
-    setProcessing(false);
+    // Instead of real API call, just show the fake QR modal
+    setTimeout(() => {
+      setShowQR(true);
+      setProcessing(false);
+    }, 800);
+  };
+
+  const handlePaymentSuccess = async () => {
+    setShowQR(false);
+    setProcessing(true);
+    try {
+      // Simulate backend order creation via verifyPayment
+      const res = await verifyPayment({
+        razorpay_order_id:   `fake_ord_${Date.now()}`,
+        razorpay_payment_id: `fake_pay_${Date.now()}`,
+        razorpay_signature:  "fake_sig",
+        user_id:      userId,
+        items:        cartItems,
+        grand_total:  grandTotal,
+        address:      deliveryAddress,
+      });
+
+      setOrderId(res.data.order_id);
+      setStep(3);
+      toast.success("Payment Received! Packing your order...");
+    } catch (err) {
+      toast.error("Error finalizing your order.");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-bg-base py-8 px-4">
+      {showQR && (
+        <FakeRazorpayQR 
+          amount={grandTotal} 
+          onConfirm={handlePaymentSuccess}
+          onCancel={() => setShowQR(false)}
+        />
+      )}
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-black text-white text-center mb-2">Checkout</h1>
         <StepIndicator currentStep={step} />
@@ -222,7 +255,7 @@ export default function Checkout() {
             <PaymentStep
               cartItems={cartItems}
               grandTotal={grandTotal}
-              onPlaceOrder={handlePlaceOrder}
+              onPlaceOrder={handlePay}
               isProcessing={isProcessing}
             />
           )}
