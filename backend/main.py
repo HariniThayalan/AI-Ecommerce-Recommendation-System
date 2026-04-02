@@ -21,11 +21,11 @@ from recommendation_engine import RecommendationEngine
 
 app = FastAPI(title="ShopSmart AI", version="3.0.0")
 
-# Enable CORS for Vercel Frontend
+# Enable CORS for Frontend Development and Production
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ALLOWED_ORIGIN],
+    allow_origins=[ALLOWED_ORIGIN, "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://127.0.0.1:5173", "http://127.0.0.1:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,14 +36,18 @@ df     = None
 engine: Optional[RecommendationEngine] = None
 
 razorpay_client = razorpay.Client(
-    auth=(os.getenv("RAZORPAY_KEY_ID"), os.getenv("RAZORPAY_KEY_SECRET"))
+    auth=(
+        os.getenv("RAZORPAY_KEY_ID", ""),
+        os.getenv("RAZORPAY_KEY_SECRET", "")
+    )
 )
 
 
 @app.on_event("startup")
 async def startup():
     global df, engine
-    df     = load_and_format("cleaned_data.csv")
+    df = load_and_format("cleaned_data.csv")
+    df = df.drop_duplicates("ProdID")
     engine = RecommendationEngine(df)
     prods  = df["ProdID"].nunique()
     users  = df["User's ID"].nunique()
@@ -121,7 +125,8 @@ def content_recs(product_id: str, n: int = Query(12, ge=1, le=50)):
 @app.get("/recommend/collaborative/{user_id}")
 def collab_recs(user_id: str, n: int = Query(12, ge=1, le=50)):
     try:
-        recs = engine.get_collaborative(int(user_id), n)
+        uid = int(user_id) if user_id.isdigit() else 1705
+        recs = engine.get_collaborative(uid, n)
         return {"recommendations": recs, "mode": "collaborative", "user_id": user_id}
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -130,7 +135,9 @@ def collab_recs(user_id: str, n: int = Query(12, ge=1, le=50)):
 @app.get("/recommend/hybrid/{user_id}/{product_id}")
 def hybrid_recs(user_id: str, product_id: str, n: int = Query(12, ge=1, le=50)):
     try:
-        recs = engine.get_hybrid(int(user_id), int(product_id), n)
+        uid = int(user_id) if user_id.isdigit() else 1705
+        pid = int(product_id) if product_id.isdigit() else 1
+        recs = engine.get_hybrid(uid, pid, n)
         return {"recommendations": recs, "mode": "hybrid"}
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -270,9 +277,55 @@ async def toggle_wishlist(user_id: str, product_id: str):
 async def get_wishlist(user_id: str):
     return {"product_ids": fdb.get_wishlist(user_id)}
 
+@app.get("/recommend/{user_id}")
+def smart_recommend(user_id: str, product_id: int = None, n: int = 12):
 
+    if engine is None:
+        raise HTTPException(503, "Engine not ready")
+
+    # New user
+    try:
+        uid = int(user_id)
+    except:
+        return {
+            "mode": "error",
+            "message": "Invalid user_id"
+        }
+
+    # Check empty first
+    if engine.user_sim.empty:
+        return {
+            "mode": "fallback",
+            "recommendations": engine.get_top_rated(n)
+        }
+
+    # Then check new user
+    if uid not in engine.user_sim.index:
+        return {
+            "mode": "new_user",
+            "recommendations": engine.get_top_rated(n)
+        }
+
+    # Hybrid (if product selected)
+    if product_id is not None:
+        try:
+            pid = int(product_id)
+        except:
+            return {"mode": "error", "message": "Invalid product_id"}
+
+        return {
+            "mode": "hybrid",
+            "recommendations": engine.get_hybrid(uid, pid, n)
+        }
+
+    # Default collaborative
+    return {
+        "mode": "collaborative",
+        "recommendations": engine.get_collaborative(uid, n)
+    }
 # ── Entry ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+

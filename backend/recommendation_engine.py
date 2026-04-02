@@ -23,7 +23,11 @@ class RecommendationEngine:
     # ── Model builders ─────────────────────────────────────────────────────────
     def _build_content_model(self):
         tags = self.df["Tags"].fillna("").astype(str)
-        self.tfidf        = TfidfVectorizer(stop_words="english", max_features=5000)
+        self.tfidf = TfidfVectorizer(
+            stop_words="english",
+            max_features=3000,
+            ngram_range=(1, 2)
+        )
         self.tfidf_matrix = self.tfidf.fit_transform(tags)
 
     def _build_collab_model(self):
@@ -91,11 +95,12 @@ class RecommendationEngine:
         if not_rated_ids.empty or sim_ratings.empty:
             return self.get_top_rated(top_n)
 
-        avg_scores = (
-            sim_ratings[not_rated_ids]
-            .mean()
-            .sort_values(ascending=False)
-        )
+        # Weighted average using similarity scores
+        weights = similar.values.reshape(-1, 1)
+
+        weighted_scores = (sim_ratings * weights).sum(axis=0) / weights.sum()
+
+        avg_scores = weighted_scores[not_rated_ids].sort_values(ascending=False)
         top_ids = avg_scores.head(top_n).index.tolist()
 
         results = []
@@ -127,7 +132,13 @@ class RecommendationEngine:
             co  = 1 - collab_ids.get(pid, n_col) / n_col
             row = self.df[self.df["ProdID"].astype(str) == pid]
             pop = float(row["Review Count"].values[0]) / max_rev if not row.empty else 0
-            scores[pid] = round(0.4 * c + 0.4 * co + 0.2 * pop, 4)
+            # Dynamic weighting
+            if user_id not in self.user_sim.index:
+                w_c, w_co, w_p = 0.6, 0.0, 0.4   # new user
+            else:
+                w_c, w_co, w_p = 0.3, 0.5, 0.2   # existing user
+
+            scores[pid] = round(w_c * c + w_co * co + w_p * pop, 4)
 
         top_ids = sorted(scores, key=scores.get, reverse=True)[:top_n]
         results = []

@@ -3,7 +3,7 @@ import { Toaster } from "react-hot-toast";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Chatbot from "./components/Chatbot";
-import Landing from "./pages/Landing";
+import Login from "./pages/Login";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
@@ -17,23 +17,23 @@ export default function App() {
         position="top-right"
         toastOptions={{
           style: {
-            background: "#1A1A2E",
-            color: "#FFFFFE",
-            border: "1px solid rgba(108,99,255,0.3)",
-            borderRadius: "12px",
+            background: "#232F3E",
+            color: "#FFFFFF",
+            border: "1px solid #131921",
+            borderRadius: "8px",
           },
         }}
       />
-      <div className="min-h-screen bg-bg-base text-white font-sans flex flex-col">
+      <div className="min-h-screen bg-amz-bg text-amz-text font-sans flex flex-col">
         <Navbar />
-        <main className="flex-1">
+        <main className="flex-1 w-full">
           <Routes>
-            <Route path="/"            element={<Landing />} />
-            <Route path="/products"    element={<Products />} />
+            <Route path="/" element={<Login />} />
+            <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/cart"        element={<Cart />} />
-            <Route path="/checkout"    element={<Checkout />} />
-            <Route path="/profile"     element={<Profile />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
         </main>
         <Footer />

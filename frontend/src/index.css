@@ -4,31 +4,60 @@
 
 @layer base {
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0F0E17; color: #FFFFFE; font-family: "Inter", sans-serif; }
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #0F0E17; }
-  ::-webkit-scrollbar-thumb { background: #6C63FF55; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #6C63FF; }
+
+  body {
+    background: #EAEDED;   /* Amazon light background */
+    color: #0F1111;        /* dark text */
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Scrollbar (light style) */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #EAEDED;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
 }
 
 @layer utilities {
   .glass {
-    background: rgba(26, 26, 46, 0.8);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(108, 99, 255, 0.2);
-  }
-  .grad-text {
-    background: linear-gradient(135deg, #6C63FF, #FF6584);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
   }
   .card-hover {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .card-hover:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 20px 40px rgba(108, 99, 255, 0.25);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
+  }
+  .btn-amazon {
+    background: linear-gradient(to bottom, #f8e3ad, #EEAF3A);
+    border: 1px solid #a88734;
+    color: #111;
+  }
+  .btn-amazon:hover {
+    background: linear-gradient(to bottom, #f5d78e, #eeb950);
+  }
+  .input-focus {
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .input-focus:focus {
+    border-color: #e77600;
+    box-shadow: 0 0 3px 2px rgba(228, 121, 17, 0.5);
+    outline: none;
   }
 }
 

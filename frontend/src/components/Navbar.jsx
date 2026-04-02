@@ -1,125 +1,106 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, Heart, Search, ShoppingBag, User, Menu, X } from "lucide-react";
+import { Search, ShoppingCart, User, Menu, MapPin } from "lucide-react";
 import { useStore } from "../store/useStore";
+import { useState } from "react";
 
 export default function Navbar() {
+  const { cartCount, userName, isLoggedIn, logout } = useStore();
+  const [search, setSearch] = useState("");
   const navigate = useNavigate();
-  const { cartItems, wishlistIds, isLoggedIn, userName } = useStore();
-  const cartCount     = cartItems.reduce((s, i) => s + i.quantity, 0);
-  const wishlistCount = wishlistIds.length;
-
-  const [query, setQuery] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (query.trim()) navigate(`/products?q=${encodeURIComponent(query.trim())}`);
+    if (search.trim()) {
+      navigate(`/products?q=${encodeURIComponent(search)}`);
+    } else {
+      navigate('/products');
+    }
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-bg-base/80 backdrop-blur-xl border-b border-primary/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16 gap-4">
+    <header className="flex flex-col w-full">
+      {/* Top Tier: Primary Navbar */}
+      <div className="bg-[#131921] text-white px-2 sm:px-4 py-2 flex items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
+        
+        {/* Logo */}
+        <Link to="/" className="flex items-center p-1 sm:p-2 border border-transparent hover:border-white rounded shrink-0">
+          <span className="text-xl sm:text-2xl font-bold tracking-tight">ShopSmart <span className="text-[#FEBD69] font-normal text-sm">.ai</span></span>
+        </Link>
 
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <ShoppingBag className="text-primary" size={24} />
-            <span className="font-black text-xl text-white tracking-tight">
-              Shop<span className="grad-text">Smart AI</span>
-            </span>
-          </Link>
-
-          {/* Search — hidden on mobile */}
-          <form
-            onSubmit={handleSearch}
-            className="hidden md:flex flex-1 max-w-md relative"
-          >
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search products, brands…"
-              className="w-full bg-bg-surface border border-white/15 rounded-full
-                         pl-9 pr-4 py-2 text-sm text-white placeholder-muted
-                         focus:outline-none focus:border-primary transition-colors"
-            />
-          </form>
-
-          {/* Right icons */}
-          <div className="flex items-center gap-1 sm:gap-3">
-            {/* Wishlist */}
-            <Link to="/profile" className="relative p-2 rounded-lg hover:bg-white/5 transition-colors">
-              <Heart size={20} className="text-muted hover:text-secondary transition-colors" />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-secondary text-white text-[10px]
-                                 font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Cart */}
-            <Link to="/cart" className="relative p-2 rounded-lg hover:bg-white/5 transition-colors">
-              <ShoppingCart size={20} className="text-muted hover:text-primary transition-colors" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px]
-                                 font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Auth */}
-            {isLoggedIn ? (
-              <Link to="/profile"
-                className="w-9 h-9 rounded-full bg-grad-primary flex items-center
-                           justify-center text-white font-bold text-sm shrink-0">
-                {userName[0]?.toUpperCase()}
-              </Link>
-            ) : (
-              <Link to="/profile"
-                className="hidden sm:inline-flex items-center gap-2 px-4 py-1.5 rounded-full
-                           bg-grad-primary text-white text-sm font-semibold hover:opacity-90
-                           transition-opacity">
-                <User size={15} /> Sign In
-              </Link>
-            )}
-
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-white/5"
-            >
-              {menuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
+        {/* Location (Desktop) */}
+        <div className="hidden lg:flex items-center p-2 border border-transparent hover:border-white rounded-sm cursor-pointer shrink-0">
+          <MapPin size={18} className="mt-2 text-white" />
+          <div className="ml-1 leading-tight">
+            <div className="text-xs text-gray-300">Deliver to {userName}</div>
+            <div className="text-sm font-bold">Your Location</div>
           </div>
         </div>
 
-        {/* Mobile search + nav */}
-        {menuOpen && (
-          <div className="pb-4 md:hidden flex flex-col gap-3">
-            <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search products…"
-                className="w-full bg-bg-surface border border-white/15 rounded-full
-                           pl-9 pr-4 py-2 text-sm text-white placeholder-muted
-                           focus:outline-none focus:border-primary"
-              />
-            </form>
-            <div className="flex gap-3 text-sm text-muted">
-              <Link to="/products" onClick={() => setMenuOpen(false)} className="hover:text-white">Products</Link>
-              <Link to="/cart"     onClick={() => setMenuOpen(false)} className="hover:text-white">Cart</Link>
-              <Link to="/profile"  onClick={() => setMenuOpen(false)} className="hover:text-white">Profile</Link>
+        {/* Search Bar - Center */}
+        <div className="flex flex-1 min-w-[200px] h-10 rounded-md overflow-hidden bg-white focus-within:ring-2 focus-within:ring-[#FEBD69] order-last sm:order-none w-full sm:w-auto mt-2 sm:mt-0">
+          <select className="hidden md:block bg-gray-100 text-gray-900 text-sm px-3 border-r border-gray-300 focus:outline-none hover:bg-gray-200 cursor-pointer">
+            <option>All</option>
+            <option>Electronics</option>
+            <option>Fashion</option>
+          </select>
+          <form className="flex-1 flex" onSubmit={handleSearch}>
+            <input
+              type="text"
+              placeholder="Search ShopSmart.ai"
+              className="w-full px-4 text-gray-900 outline-none"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <button type="submit" className="bg-[#FEBD69] hover:bg-[#f3a847] px-4 flex items-center justify-center transition-colors cursor-pointer">
+              <Search className="text-gray-900" size={20} />
+            </button>
+          </form>
+        </div>
+
+        {/* Right Section: Accounts & Lists */}
+        <div className="flex items-center shrink-0">
+          {isLoggedIn ? (
+            <div className="flex flex-col items-start p-2 border border-transparent hover:border-white rounded-sm cursor-pointer" onClick={logout}>
+              <span className="text-xs text-gray-300 leading-none">Hello, {userName}</span>
+              <span className="text-sm font-bold leading-none flex items-center">Sign Out</span>
             </div>
-          </div>
-        )}
+          ) : (
+            <Link to="/" className="flex flex-col items-start p-2 border border-transparent hover:border-white rounded-sm cursor-pointer">
+              <span className="text-xs text-gray-300 leading-none">Hello, sign in</span>
+              <span className="text-sm font-bold leading-none">Accounts & Lists</span>
+            </Link>
+          )}
+
+          {/* Orders */}
+          <Link to="/profile" className="hidden md:flex flex-col items-start p-2 border border-transparent hover:border-white rounded-sm">
+            <span className="text-xs text-gray-300 leading-none">Returns</span>
+            <span className="text-sm font-bold leading-none">& Orders</span>
+          </Link>
+
+          {/* Cart */}
+          <Link to="/cart" className="flex items-end p-2 border border-transparent hover:border-white rounded-sm relative">
+            <div className="relative">
+              <ShoppingCart size={28} />
+              <span className="absolute -top-1 left-1/2 -ml-1 text-[#FEBD69] font-bold text-sm w-6 text-center">
+                {cartCount}
+              </span>
+            </div>
+            <span className="text-sm font-bold hidden sm:block mt-1">Cart</span>
+          </Link>
+        </div>
       </div>
-    </nav>
+
+      {/* Bottom Tier: Sub-navigation */}
+      <div className="bg-[#232F3E] text-white text-sm px-4 py-1.5 flex items-center gap-4 overflow-x-auto whitespace-nowrap hide-scrollbar">
+        <div className="flex items-center gap-1 font-bold cursor-pointer border border-transparent hover:border-white p-1 rounded-sm">
+          <Menu size={20} /> All
+        </div>
+        <Link to="/products" className="border border-transparent hover:border-white p-1 rounded-sm">Today's Deals</Link>
+        <Link to="/products" className="border border-transparent hover:border-white p-1 rounded-sm">Customer Service</Link>
+        <Link to="/products" className="border border-transparent hover:border-white p-1 rounded-sm">Registry</Link>
+        <Link to="/products" className="border border-transparent hover:border-white p-1 rounded-sm">Gift Cards</Link>
+        <Link to="/products" className="border border-transparent hover:border-white p-1 rounded-sm">Sell</Link>
+      </div>
+    </header>
   );
 }

@@ -1,86 +1,67 @@
 import { useStore } from "../store/useStore";
+import { Star } from "lucide-react";
 
-const CATEGORIES = ["All", "Beauty", "Personal", "Health", "Household", "Food", "Sports"];
-const RATINGS    = [{ label: "All",   val: 0 },
-                    { label: "3★+",  val: 3 },
-                    { label: "4★+",  val: 4 },
-                    { label: "4.5★+",val: 4.5 }];
-
-export default function FilterSidebar({ onClose }) {
+export default function FilterSidebar() {
   const {
-    selectedCategory, setSelectedCategory, fetchProducts,
-    minRating, setMinRating,
-    maxPrice, setMaxPrice,
+    minRating,
+    setMinRating,
+    maxPrice,
+    setMaxPrice,
   } = useStore();
 
-  const handleCategory = (cat) => {
-    setSelectedCategory(cat);
-    if (cat === "All") fetchProducts();
-    else fetchProducts({ category: cat });
-    onClose?.();
-  };
-
   return (
-    <aside className="bg-bg-surface border border-white/10 rounded-2xl p-5
-                      w-full md:w-64 md:shrink-0 flex flex-col gap-5 h-fit">
+    <div className="bg-transparent pr-4 w-full h-full">
 
-      {/* Category */}
-      <div>
-        <h3 className="text-white font-semibold text-sm mb-3 uppercase tracking-wider">Category</h3>
-        <div className="flex flex-col gap-1">
-          {CATEGORIES.map((cat) => (
+      <h2 className="font-bold text-gray-900 mb-4">Filters</h2>
+
+      {/* Customer Rating */}
+      <div className="mb-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Customer Reviews</h3>
+        <div className="flex flex-col gap-2">
+          {[4, 3, 2, 1].map((rating) => (
             <button
-              key={cat}
-              onClick={() => handleCategory(cat)}
-              className={`text-left px-3 py-2 rounded-lg text-sm transition-colors
-                ${selectedCategory === cat
-                  ? "bg-primary text-white font-semibold"
-                  : "text-muted hover:text-white hover:bg-white/5"}`}
+              key={rating}
+              onClick={() => setMinRating(rating)}
+              className={`flex items-center gap-1 text-sm hover:text-[#F3A847] transition-colors ${minRating === rating ? 'text-[#FEBD69] font-bold' : 'text-gray-900'}`}
             >
-              {cat}
+              <div className="flex items-center text-[#FEBD69]">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={16} fill={i < rating ? "currentColor" : "transparent"} className={i < rating ? "text-[#FEBD69]" : "text-gray-300"} />
+                ))}
+              </div>
+              <span className="text-[#007185] hover:text-[#C40000] ml-1">& Up</span>
             </button>
           ))}
+          <button
+            onClick={() => setMinRating(0)}
+            className={`text-sm text-left hover:text-[#C40000] transition-colors ${minRating === 0 ? 'text-[#007185] font-bold' : 'text-[#007185]'}`}
+          >
+            Clear rating filter
+          </button>
         </div>
       </div>
 
-      <hr className="border-white/10" />
-
-      {/* Min Rating */}
-      <div>
-        <h3 className="text-white font-semibold text-sm mb-3 uppercase tracking-wider">Min Rating</h3>
-        <div className="flex flex-col gap-1">
-          {RATINGS.map((r) => (
-            <button
-              key={r.val}
-              onClick={() => setMinRating(r.val)}
-              className={`text-left px-3 py-2 rounded-lg text-sm transition-colors
-                ${minRating === r.val
-                  ? "bg-primary text-white font-semibold"
-                  : "text-muted hover:text-white hover:bg-white/5"}`}
-            >
-              {r.label}
-            </button>
-          ))}
+      {/* PRICE */}
+      <div className="mb-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Price</h3>
+        <div className="text-sm font-bold text-gray-900 mb-2">
+          Up to ₹{maxPrice}
         </div>
-      </div>
-
-      <hr className="border-white/10" />
-
-      {/* Max Price */}
-      <div>
-        <h3 className="text-white font-semibold text-sm mb-3 uppercase tracking-wider">
-          Max Price: <span className="text-primary">₹{maxPrice.toLocaleString()}</span>
-        </h3>
         <input
-          type="range" min={200} max={10000} step={100}
+          type="range"
+          min="0"
+          max="10000"
+          step="100"
           value={maxPrice}
           onChange={(e) => setMaxPrice(Number(e.target.value))}
-          className="w-full accent-primary"
+          className="w-full accent-[#FEBD69] cursor-pointer"
         />
-        <div className="flex justify-between text-xs text-muted mt-1">
-          <span>₹200</span><span>₹10,000</span>
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>₹0</span>
+          <span>₹10K+</span>
         </div>
       </div>
-    </aside>
+
+    </div>
   );
 }

@@ -1,101 +1,73 @@
-import { useNavigate } from "react-router-dom";
-import { Heart, ShoppingCart } from "lucide-react";
 import { useStore } from "../store/useStore";
-import StarRating from "./StarRating";
+import { Link } from "react-router-dom";
+import { Star } from "lucide-react";
 
 export default function ProductCard({ product, showMatchScore = false }) {
-  const navigate = useNavigate();
-  const { addToCart, toggleWishlist, wishlistIds } = useStore();
-  const isWishlisted = wishlistIds.includes(product.id);
-
+  const addToCart = useStore((state) => state.addToCart);
+  
   return (
-    <div
-      className="bg-bg-card border border-primary/20 rounded-2xl overflow-hidden
-                 cursor-pointer card-hover group relative flex flex-col"
-      onClick={() => navigate(`/product/${product.id}`)}
-    >
-      {/* AI Match badge */}
-      {showMatchScore && product.match_score && (
-        <div className="absolute top-3 left-3 z-10 bg-grad-primary
-                        text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-lg">
-          {product.match_score}
-        </div>
-      )}
+    <div className="bg-white rounded-md border border-gray-200 overflow-hidden card-hover h-full flex flex-col group">
 
-      {/* Wishlist heart */}
-      <button
-        onClick={(e) => { e.stopPropagation(); toggleWishlist(product); }}
-        className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-bg-base/70
-                   backdrop-blur-sm transition-colors hover:bg-bg-base"
-      >
-        <Heart
-          size={16}
-          className={isWishlisted ? "fill-secondary text-secondary" : "text-muted"}
-        />
-      </button>
-
-      {/* Image */}
-      <div className="w-full h-48 overflow-hidden bg-bg-surface shrink-0">
+      {/* Image Section */}
+      <Link to={`/product/${product.id}`} className="relative bg-gray-50 flex items-center justify-center p-4 h-48 overflow-hidden">
         <img
-          src={product.image_url}
+          src={
+            product.image_url ||
+            product.image ||
+            product.thumbnail ||
+            product.img ||
+            "https://via.placeholder.com/200"
+          }
           alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
-            e.target.src = `https://picsum.photos/seed/${product.id}/400/300`;
+            e.target.src = "https://via.placeholder.com/200";
           }}
+          className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-105"
         />
-      </div>
+        {showMatchScore && product.matchScore && (
+          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">
+            {Math.round(product.matchScore * 100)}% Match
+          </div>
+        )}
+      </Link>
 
-      {/* Content */}
-      <div className="p-4 flex flex-col gap-2 flex-1">
-        {/* Badges */}
-        <div className="flex gap-2 flex-wrap">
-          <span className="text-[11px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">
-            {product.category}
-          </span>
-          {product.brand && (
-            <span className="text-[11px] bg-bg-surface text-muted px-2 py-0.5 rounded-full">
-              {product.brand}
-            </span>
-          )}
+      {/* Details Section */}
+      <div className="p-4 flex flex-col flex-1">
+        <Link to={`/product/${product.id}`} className="hover:text-amz-linkHover group">
+          <h2 className="text-sm font-medium line-clamp-2 text-amz-text h-10 group-hover:underline">
+            {product.name}
+          </h2>
+        </Link>
+
+        {/* Ratings */}
+        <div className="flex items-center gap-1 mt-1">
+          <div className="flex items-center text-amz-accent">
+            <Star size={14} fill="currentColor" />
+            <span className="text-amz-link text-xs ml-1 font-bold">{product.avg_rating || "4.0"}</span>
+          </div>
         </div>
-
-        {/* Name */}
-        <p className="text-white text-sm font-semibold line-clamp-2 leading-snug">
-          {product.name}
-        </p>
-
-        {/* Rating */}
-        <StarRating rating={product.avg_rating} count={product.review_count} />
 
         {/* Price */}
-        <div className="flex items-center gap-2 flex-wrap mt-auto pt-1">
-          <span className="text-primary font-bold text-lg">
-            {product.final_price_display}
-          </span>
-          {product.discount_percent > 0 && (
-            <>
-              <span className="text-muted text-sm line-through">
-                {product.price_display}
-              </span>
-              <span className="text-accent text-[11px] font-semibold bg-accent/10
-                               px-2 py-0.5 rounded-full">
-                {product.discount_display}
-              </span>
-            </>
-          )}
+        <div className="mt-2 text-amz-text flex items-baseline gap-1">
+          <span className="text-xs">₹</span>
+          <span className="text-2xl font-medium tracking-tight leading-none">{Math.floor(product.final_price)}</span>
+          <span className="text-xs leading-none">{(product.final_price % 1).toFixed(2).substring(1)}</span>
+        </div>
+        
+        {/* Prime / Badges (Optional Mock) */}
+        <div className="text-xs text-gray-500 font-medium mt-1 mb-3">
+          Get it by Tomorrow
         </div>
 
-        {/* Add to Cart button */}
-        <button
-          onClick={(e) => { e.stopPropagation(); addToCart(product); }}
-          className="w-full mt-2 py-2.5 rounded-xl text-sm font-semibold
-                     bg-grad-primary text-white hover:opacity-90 transition-opacity
-                     flex items-center justify-center gap-2"
-        >
-          <ShoppingCart size={15} />
-          Add to Cart
-        </button>
+        {/* Button - anchors to bottom */}
+        <div className="mt-auto">
+          <button
+            onClick={() => addToCart(product)}
+            className="w-full py-1.5 px-3 rounded-full btn-amazon text-sm font-medium transition-colors shadow-sm cursor-pointer"
+          >
+            Add to Cart
+          </button>
+        </div>
       </div>
     </div>
   );

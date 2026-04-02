@@ -4,20 +4,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: {
-          base:    "#0F0E17",
-          card:    "#1A1A2E",
-          surface: "#16213E",
+        amz: {
+          dark: "#131921",
+          nav: "#232F3E",
+          bg: "#EAEDED",
+          light: "#FFFFFF",
+          accent: "#FEBD69",
+          accentHover: "#F3A847",
+          link: "#007185",
+          linkHover: "#C40000",
+          text: "#0F1111",
+          muted: "#565959"
         },
-        primary:   "#6C63FF",
-        secondary: "#FF6584",
-        accent:    "#43D9AD",
-        warning:   "#FFA34D",
-        muted:     "#A7A9BE",
+        bg: {
+          base:    "#EAEDED",
+          card:    "#FFFFFF",
+          surface: "#F2F4F8",
+        },
+        primary:   "#007185",
+        secondary: "#FF9900",
+        accent:    "#FEBD69",
+        warning:   "#DE7921",
+        muted:     "#565959",
       },
       fontFamily: { sans: ["Inter", "sans-serif"] },
-      backgroundImage: {
-        "grad-primary": "linear-gradient(135deg, #6C63FF, #FF6584)",
+      boxShadow: {
+        'premium': '0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02)',
+        'premium-hover': '0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05)',
       },
     },
   },

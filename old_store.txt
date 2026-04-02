@@ -1,74 +1,26 @@
 import { create } from "zustand";
-import toast from "react-hot-toast";
 import * as api from "../api/client";
-import { auth } from "../firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signOut } from "firebase/auth";
+import toast from "react-hot-toast";
+
+const DEMO_USER = "1705"; // real User's ID in the CSV — has collaborative data
 
 export const useStore = create((set, get) => ({
-  // ── Auth (Firebase) ─────────────────────────────────────────────────────────
-  userId: null,
-  userName: "",
-  userEmail: "",
+  // ── Auth ────────────────────────────────────────────────────────────────────
+  userId:    DEMO_USER,
+  userName:  "Demo User",
+  userEmail: "demo@shopsmart.ai",
   isLoggedIn: false,
-
-  login: async (email, password) => {
-    try {
-      const userCred = await signInWithEmailAndPassword(auth, email, password);
-      // For collaborative filtering to demo well, if they log in via firebase, 
-      // we could map to a demo user id. But let's keep the real UID if we use real users.
-      // E-commerce recommendations need a numerical ID or Firebase UID mapped properly.
-      set({
-        isLoggedIn: true,
-        userEmail: userCred.user.email,
-        userName: userCred.user.displayName || "User",
-        userId: userCred.user.uid
-      });
-      toast.success(`Welcome, ${userCred.user.displayName || email}! 🎉`);
-    } catch (err) {
-      toast.error(err.message);
-      throw err;
-    }
-  },
-
-  signup: async (email, password, name) => {
-    try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      if (name) await updateProfile(userCred.user, { displayName: name });
-      set({
-        isLoggedIn: true,
-        userEmail: email,
-        userName: name || "User",
-        userId: userCred.user.uid
-      });
-      toast.success(`Account created! Welcome, ${name || "User"}! 🎉`);
-    } catch (err) {
-      toast.error(err.message);
-      throw err;
-    }
-  },
-
-  logout: async () => {
-    try {
-      await signOut(auth);
-      set({ isLoggedIn: false, userName: "", userEmail: "", userId: null, cartItems: [] });
-      toast("Signed out.");
-    } catch (err) {
-      toast.error(err.message);
-    }
-  },
-
-  // ── Search & User History ───────────────────────────────────────────────────
   searchHistory: [],
   orders: [],
-  
-  addToSearchHistory: (query) => set(state => ({
-    searchHistory: [
-      ...state.searchHistory.filter(q => q !== query), // avoid dupes
-      query
-    ].slice(-20)  // keep last 20 searches
-  })),
 
-  setOrders: (orders) => set({ orders }),
+  login: (name, email) => {
+    set({ isLoggedIn: true, userName: name, userEmail: email || "user@shopsmart.ai" });
+    toast.success(`Welcome, ${name}! 🎉`);
+  },
+  logout: () => {
+    set({ isLoggedIn: false, userName: "Demo User", userEmail: "demo@shopsmart.ai" });
+    toast("Signed out.");
+  },
 
   // ── Products ─────────────────────────────────────────────────────────────────
   products:         [],
@@ -100,7 +52,7 @@ export const useStore = create((set, get) => ({
 
   fetchRecommendations: async (mode, prodId) => {
     const pid = prodId || get().currentProdId;
-    const uid = get().userId || "1705"; // fallback to a demo user ID if not fully integrated
+    const uid = get().userId;
     set({ isLoading: true, recMode: mode });
     try {
       let res;
@@ -117,7 +69,7 @@ export const useStore = create((set, get) => ({
 
   fetchAllRecommendations: async (prodId) => {
     const pid = prodId || get().currentProdId;
-    const uid = get().userId || "1705";
+    const uid = get().userId;
     set({ multiRecsLoading: true });
     try {
       const [contentRes, collabRes, hybridRes] = await Promise.all([
@@ -144,24 +96,20 @@ export const useStore = create((set, get) => ({
   setMaxPrice:         (p)    => set({ maxPrice: p }),
   setSortBy:           (s)    => set({ sortBy: s }),
 
+  addToSearchHistory: (query) => set(state => ({
+    searchHistory: [
+      ...state.searchHistory.filter(q => q !== query), // avoid dupes
+      query
+    ].slice(-20)  // keep last 20 searches
+  })),
+
+  setOrders: (orders) => set({ orders }),
+
   // ── Cart ─────────────────────────────────────────────────────────────────────
   cartItems: [],
 
   addToCart: async (product) => {
     const uid = get().userId;
-    // Client side fallback if user is not fully bound to API yet
-    const cur = get().cartItems;
-    const existing = cur.find((c) => c.product.id === product.id);
-    if (!uid) {
-        if(existing) {
-             set({ cartItems: cur.map(c => c.product.id === product.id ? { ...c, quantity: c.quantity + 1 } : c) });
-        } else {
-             set({ cartItems: [...cur, { product, quantity: 1 }] });
-        }
-        toast.success(`Added to cart!`);
-        return;
-    }
-
     try {
       const res = await api.addToCart(uid, product, 1);
       set({ cartItems: res.data.cart });
@@ -171,12 +119,6 @@ export const useStore = create((set, get) => ({
 
   removeFromCart: async (productId) => {
     const uid = get().userId;
-    if (!uid) {
-         set({ cartItems: get().cartItems.filter(c => c.product.id !== productId) });
-         toast("Item removed.");
-         return;
-    }
-
     try {
       const res = await api.removeFromCart(uid, productId);
       set({ cartItems: res.data.cart });
@@ -186,10 +128,6 @@ export const useStore = create((set, get) => ({
 
   updateQty: async (productId, qty) => {
     const uid = get().userId;
-    if (!uid) {
-         set({ cartItems: get().cartItems.map(c => c.product.id === productId ? { ...c, quantity: qty } : c) });
-         return;
-    }
     try {
       const res = await api.updateQty(uid, productId, qty);
       set({ cartItems: res.data.cart });
@@ -208,21 +146,9 @@ export const useStore = create((set, get) => ({
 
   toggleWishlist: async (product) => {
     const uid = get().userId;
-    const cur = get().wishlistIds;
-    
-    if (!uid) {
-         if (cur.includes(product.id)) {
-             set({ wishlistIds: cur.filter((id) => id !== product.id) });
-             toast("Removed from wishlist.");
-         } else {
-             set({ wishlistIds: [...cur, product.id] });
-             toast.success("Added to wishlist! ❤️");
-         }
-         return;
-    }
-
     try {
       const res = await api.toggleWishlist(uid, product.id);
+      const cur = get().wishlistIds;
       if (res.data.status === "added") {
         set({ wishlistIds: [...cur, product.id] });
         toast.success("Added to wishlist! ❤️");
