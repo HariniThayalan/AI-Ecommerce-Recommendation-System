@@ -29,7 +29,7 @@ export default function FilterSidebar() {
                   <Star key={i} size={16} fill={i < rating ? "currentColor" : "transparent"} className={i < rating ? "text-[#FEBD69]" : "text-gray-300"} />
                 ))}
               </div>
-              <span className="text-[#007185] hover:text-[#C40000] ml-1">& Up</span>
+              <span className="text-[#007185] hover:text-[#C40000] ml-1">Stars</span>
             </button>
           ))}
           <button

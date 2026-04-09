@@ -69,6 +69,8 @@ def health():
 def get_products(
     category: Optional[str] = None,
     q:        Optional[str] = None,
+    rating:   Optional[float] = None,
+    max_price: Optional[float] = None,
     limit:  int = Query(48, ge=1, le=200),
     offset: int = Query(0,  ge=0),
 ):
@@ -86,6 +88,20 @@ def get_products(
             | subset["Category"].str.lower().str.contains(ql, na=False)
         )
         subset = subset[mask]
+        
+    if rating is not None:
+        # User wants "particular range of rating", so if rating=4, it means 4.0 <= r <= 5.0
+        # If rating=3, it means 3.0 <= r < 4.0
+        max_r = 5.1 if rating == 4 else rating + 1
+        subset = subset[(subset["Rating"] >= rating) & (subset["Rating"] < max_r)]
+        
+    if max_price is not None:
+        # Price is generated deterministically based on ProdID
+        subset["seed"] = subset["ProdID"] % 1000
+        subset["price"] = 199 + subset["seed"] * 9.5
+        subset["discount"] = (subset["ProdID"] % 6).map({0:0, 1:0, 2:5, 3:10, 4:15, 5:20})
+        subset["final_price"] = subset["price"] * (1 - subset["discount"] / 100)
+        subset = subset[subset["final_price"] <= max_price]
 
     total = len(subset)
     page  = subset.iloc[offset: offset + limit]
@@ -150,24 +166,24 @@ class CartItemIn(BaseModel):
 
 
 @app.get("/cart/{user_id}")
-async def get_cart(user_id: str):
+def get_cart(user_id: str):
     return {"items": fdb.get_cart(user_id)}
 
 
 @app.post("/cart/{user_id}/add")
-async def add_to_cart(user_id: str, body: CartItemIn):
+def add_to_cart(user_id: str, body: CartItemIn):
     cart = fdb.add_to_cart(user_id, body.product, body.quantity)
     return {"status": "ok", "cart": cart}
 
 
 @app.put("/cart/{user_id}/quantity")
-async def update_qty(user_id: str, product_id: str, quantity: int):
+def update_qty(user_id: str, product_id: str, quantity: int):
     cart = fdb.update_cart_qty(user_id, product_id, quantity)
     return {"cart": cart}
 
 
 @app.delete("/cart/{user_id}/remove/{product_id}")
-async def remove_from_cart(user_id: str, product_id: str):
+def remove_from_cart(user_id: str, product_id: str):
     cart = fdb.remove_from_cart(user_id, product_id)
     return {"cart": cart}
 
@@ -185,7 +201,7 @@ class OrderIn(BaseModel):
 
 
 @app.post("/orders")
-async def place_order(order: OrderIn):
+def place_order(order: OrderIn):
     order_id = "ORD-" + str(uuid.uuid4())[:8].upper()
     data = {**order.dict(), "order_id": order_id, "status": "Confirmed"}
     fdb.save_order(order_id, data)
@@ -194,7 +210,7 @@ async def place_order(order: OrderIn):
 
 
 @app.get("/orders/{user_id}")
-async def get_orders(user_id: str):
+def get_orders(user_id: str):
     return fdb.get_orders(user_id)
 
 
@@ -268,13 +284,13 @@ async def verify_payment(body: PaymentVerifyIn):
 
 # ── Wishlist ───────────────────────────────────────────────────────────────────
 @app.post("/wishlist/{user_id}/toggle")
-async def toggle_wishlist(user_id: str, product_id: str):
+def toggle_wishlist(user_id: str, product_id: str):
     status = fdb.toggle_wishlist(user_id, product_id)
     return {"status": status}
 
 
 @app.get("/wishlist/{user_id}")
-async def get_wishlist(user_id: str):
+def get_wishlist(user_id: str):
     return {"product_ids": fdb.get_wishlist(user_id)}
 
 @app.get("/recommend/{user_id}")

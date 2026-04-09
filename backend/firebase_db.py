@@ -1,5 +1,6 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 import os
 import json
 
@@ -79,7 +80,7 @@ def save_order(order_id: str, order_data: dict):
     db.collection("orders").document(order_id).set(order_data)
 
 def get_orders(user_id: str) -> list:
-    docs = db.collection("orders").where("user_id", "==", user_id).stream()
+    docs = db.collection("orders").where(filter=FieldFilter("user_id", "==", user_id)).stream()
     return [doc.to_dict() for doc in docs]
 
 # ── Wishlist ──────────────────────────────────────────────────

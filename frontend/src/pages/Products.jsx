@@ -25,6 +25,9 @@ function SkeletonCard() {
 
 export default function Products() {
   const [searchParams] = useSearchParams();
+  const q   = searchParams.get("q");
+  const cat = searchParams.get("category");
+
   const {
     products, isLoading,
     fetchRecommendations, fetchProducts,
@@ -35,44 +38,39 @@ export default function Products() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Load on mount — respect URL params
+  // Load on mount & when params/filters change
   useEffect(() => {
-    const q   = searchParams.get("q");
-    const cat = searchParams.get("category");
-    if (q) {
-      fetchProducts({ q });
-      useStore.getState().addToSearchHistory(q);
+    // If a filter is applied, we don't just rely on top_rated. We fetch products with filters.
+    if (q || cat || minRating || maxPrice !== 10000) {
+      fetchProducts({ 
+        q, 
+        category: cat, 
+        rating: minRating || undefined, 
+        max_price: maxPrice 
+      });
+      if (q) useStore.getState().addToSearchHistory(q);
+    } else {
+      // Default view
+      fetchRecommendations("top_rated");
     }
-    else if (cat) fetchProducts({ category: cat });
-    else          fetchRecommendations("top_rated");
 
     // Always auto-load all AI sections
     fetchAllRecommendations();
-  }, [searchParams]);
+  }, [q, cat, minRating, maxPrice]);
 
-  // Client-side filter + sort
+  // Client-side sort (we do price and rating filter in backend now, but keep sort here)
   const { filteredGrid } = useMemo(() => {
-    const filterFn = (p) => {
-      const r = Number(p.avg_rating);
-      const pr = Number(p.final_price);
-
-      if (minRating && r < minRating) return false;
-      if (maxPrice && pr > maxPrice) return false;
-
-      return true;
-    };
-
     const sortFn = (a, b) => {
-      if (sortBy === "price_asc")  return a.final_price - b.final_price;
-      if (sortBy === "price_desc") return b.final_price - a.final_price;
-      if (sortBy === "rating")     return b.avg_rating - a.avg_rating;
+      if (sortBy === "price_asc")  return (a.final_price || 0) - (b.final_price || 0);
+      if (sortBy === "price_desc") return (b.final_price || 0) - (a.final_price || 0);
+      if (sortBy === "rating")     return (b.avg_rating || 0) - (a.avg_rating || 0);
       return 0; // relevance
     };
 
     return {
-      filteredGrid: [...products].filter(filterFn).sort(sortFn),
+      filteredGrid: [...products].sort(sortFn),
     };
-  }, [products, multiRecs, minRating, maxPrice, sortBy]);
+  }, [products, sortBy]);
 
   return (
     <div className="bg-amz-bg min-h-screen text-amz-text flex justify-center">
@@ -122,7 +120,7 @@ export default function Products() {
               </div>
             ) : (
               <div className="bg-white p-8 rounded-md border border-gray-200 text-center shadow-sm">
-                <h2 className="text-xl font-bold mb-2">No results for your filters.</h2>
+                <h2 className="text-xl font-bold mb-2">Products not available for this rating or filter.</h2>
                 <p className="text-gray-600 mb-4">Try checking your spelling or use more general terms, or adjust the price/rating filters.</p>
               </div>
             )
