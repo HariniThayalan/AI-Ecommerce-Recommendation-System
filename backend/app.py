@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
+import os
 
 from cleaning_data import process_data
 from recommender import get_recommendations
@@ -575,9 +576,11 @@ def payment():
     return jsonify({
         "status": "success",
         "message": "Payment Successful"
-    })
+    }) 
 
-# RUN SERVER
 if __name__ == "__main__":
-
-    app.run(debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False
+    )
