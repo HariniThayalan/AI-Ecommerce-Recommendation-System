@@ -26,12 +26,12 @@ function ProductDetails() {
     setError(null)
     setFeedbackMsg('')
 
-    axios.get(`http://127.0.0.1:5000/products/${id}`)
+    axios.get(`https://ai-ecommerce-recommendation-system.onrender.com/products/${id}`)
       .then(res => {
         setProduct(res.data)
         
         // Fetch recommendations for this product based on content similarity
-        axios.post('http://127.0.0.1:5000/recommend', {
+        axios.post('https://ai-ecommerce-recommendation-system.onrender.com/recommend', {
           product_name: res.data.name
         })
         .then(recRes => {

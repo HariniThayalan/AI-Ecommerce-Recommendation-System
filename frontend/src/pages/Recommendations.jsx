@@ -52,7 +52,7 @@ function Recommendations() {
 
   // Pre-fetch products to map IDs/Names to details
   useEffect(() => {
-    axios.get('http://127.0.0.1:5000/products')
+    axios.get('https://ai-ecommerce-recommendation-system.onrender.com/products')
       .then(res => {
         const productsList = res.data || []
         setAllProducts(productsList)
@@ -104,7 +104,7 @@ function Recommendations() {
       }
 
       const response = await axios.post(
-        'http://127.0.0.1:5000/recommend',
+        'https://ai-ecommerce-recommendation-system.onrender.com/recommend',
         payload
       )
       

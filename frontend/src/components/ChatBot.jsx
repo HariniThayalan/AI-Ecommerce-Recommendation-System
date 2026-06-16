@@ -46,7 +46,7 @@ function ChatBot() {
 
     try {
       const response = await axios.post(
-        'http://127.0.0.1:5000/chat',
+        'https://ai-ecommerce-recommendation-system.onrender.com/chat',
         { message: currentMessage }
       )
       setMessages(prev => [...prev, { sender: 'bot', text: response.data.reply }])

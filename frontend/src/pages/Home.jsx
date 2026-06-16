@@ -133,7 +133,7 @@ function Home() {
     }
 
     setIsLoading(true)
-    axios.get('http://127.0.0.1:5000/products')
+    axios.get('https://ai-ecommerce-recommendation-system.onrender.com/products')
       .then(res => {
         setProducts(res.data || [])
         setError(null)

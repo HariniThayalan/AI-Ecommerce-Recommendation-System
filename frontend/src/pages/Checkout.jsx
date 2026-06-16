@@ -127,7 +127,7 @@ function Checkout() {
     setIsLoading(true)
     try {
       const response = await axiosInstance.post(
-        'http://127.0.0.1:5000/payment'
+        'https://ai-ecommerce-recommendation-system.onrender.com/payment'
       )
 
       if (response.data.status === 'success') {
